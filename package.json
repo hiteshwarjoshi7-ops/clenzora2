@@ -1,0 +1,9 @@
+{
+  "name": "gndu-waste-mvp",
+  "version": "1.0.0",
+  "main": "GNDU_waste_MVP_server.js",
+  "scripts": {
+    "start": "node GNDU_waste_MVP_server.js"
+  },
+  "dependencies": {}
+}
