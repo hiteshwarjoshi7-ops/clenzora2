@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>GNDU Waste MVP - Admin</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:20px}table{border-collapse:collapse}td,th{padding:6px;border:1px solid #ddd}</style>
+</head>
+<body>
+  <h2>Admin Panel</h2>
+  <div>
+    <label>Password: <input id="pw" type="password"/></label>
+    <button id="login">Login</button>
+    <span id="status"></span>
+  </div>
+  <div id="panel" style="display:none">
+    <h3>Submissions</h3>
+    <table id="tbl"><thead><tr><th>Time</th><th>Student</th><th>SID</th><th>Code</th><th>Bin</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table>
+    <h3>Students</h3>
+    <div id="students"></div>
+  </div>
+<script>
+const API_BASE = "https://gndu-waste.onrender.com"; // change this to your Render backend URL
+
+async function api(path, data){
+  const res = await fetch(`${API_BASE}${path}`, {
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+let token = null;
+
+document.getElementById('login').onclick = async ()=>{
+  const pw = document.getElementById('pw').value;
+  const r = await api('/api/admin/login', {pw});
+  if(r.ok){ token = r.token; document.getElementById('panel').style.display='block'; document.getElementById('status').innerText='Logged in'; load(); }
+  else document.getElementById('status').innerText='Bad password';
+}
+
+async function load(){
+  const r = await api('/api/admin/list', {token});
+  if(r.ok){
+    const tbody = document.querySelector('#tbl tbody'); tbody.innerHTML='';
+    r.subs.forEach(s=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = \`<td>\${new Date(s.ts).toLocaleString()}</td><td>\${s.name}</td><td>\${s.sid}</td><td>\${s.code}</td><td>\${s.bin}</td><td>\${s.status}</td><td></td>\`;
+      const td = tr.querySelector('td:last-child');
+      if(s.status==='pending'){
+        const a = document.createElement('button'); a.innerText='Approve'; a.onclick=async ()=>{ await api('/api/admin/approve',{token,id:s.id}); load(); }
+        const b = document.createElement('button'); b.innerText='Reject'; b.onclick=async ()=>{ await api('/api/admin/reject',{token,id:s.id}); load(); }
+        td.appendChild(a); td.appendChild(b);
+      }
+      tbody.appendChild(tr);
+    })
+    document.getElementById('students').innerText = JSON.stringify(r.students, null, 2);
+  }
+}
+</script>
+</body>
+</html>

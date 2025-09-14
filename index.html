@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>GNDU Waste MVP - Student</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:20px}
+    input,button{padding:8px;margin:6px}
+    #reader{width:300px; margin-top:10px;}
+    #log{white-space:pre-wrap;background:#f6f6f6;padding:10px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <h2>GNDU Waste MVP — Student</h2>
+  <div>
+    <label>Name: <input id="name" /></label><br/>
+    <label>Student ID: <input id="sid" /></label><br/>
+    <button id="btnReg">Register / Login</button>
+  </div>
+  <hr/>
+  <div id="panel" style="display:none">
+    <h3>Submit Waste</h3>
+    <div>Logged in as <b id="who"></b> (<span id="whoid"></span>) — Points: <span id="points">0</span></div>
+    
+    <label>Barcode: <input id="barcode" placeholder="Scan or type code" /></label><br/>
+    <div id="reader"></div>
+    <label>Dustbin ID: <input id="bin" placeholder="e.g. BIN-1" /></label><br/>
+    <button id="submit">Submit Disposal</button>
+    
+    <h4>History</h4>
+    <div id="history"></div>
+    <h4>Log</h4>
+    <div id="log">Ready.</div>
+    <p><a href="admin.html" target="_blank">Open Admin Panel</a></p>
+  </div>
+
+  <!-- Barcode Scanner + API BASE -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script>
+  const API_BASE = "https://gndu-waste.onrender.com"; // change this to your Render backend URL
+
+  async function api(path, data){
+    const res = await fetch(`${API_BASE}${path}`, {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  }
+
+  let current = null;
+
+  document.getElementById('btnReg').onclick = async ()=>{
+    const name = document.getElementById('name').value.trim();
+    const sid = document.getElementById('sid').value.trim();
+    if(!name||!sid){alert('enter name and student id');return}
+    const r = await api('/api/register', {name, sid});
+    if(r.ok){ 
+      current = r.user; 
+      document.getElementById('panel').style.display='block'; 
+      document.getElementById('who').innerText = current.name; 
+      document.getElementById('whoid').innerText = current.sid; 
+      document.getElementById('points').innerText = current.points; 
+      loadHistory(); log('Logged in'); 
+    }
+  }
+
+  async function loadHistory(){
+    const res = await api('/api/profile', {sid: current.sid});
+    if(res.ok){
+      const hist = res.history || [];
+      document.getElementById('history').innerHTML = hist.map(h=>\`<div>\${new Date(h.ts).toLocaleString()} — code:\${h.code} bin:\${h.bin} status:\${h.status}</div>\`).join('')
+      document.getElementById('points').innerText = res.points;
+    }
+  }
+
+  function log(msg){ document.getElementById('log').innerText = new Date().toLocaleString()+" - "+msg+"\n"+document.getElementById('log').innerText }
+
+  document.getElementById('submit').onclick = async ()=>{
+    const code = document.getElementById('barcode').value.trim();
+    const bin = document.getElementById('bin').value.trim();
+    if(!current){alert('register first');return}
+    if(!code||!bin){alert('enter code and bin');return}
+    const r = await api('/api/submit', {sid:current.sid, code, bin});
+    if(r.ok){ log('Submitted — pending approval'); loadHistory(); }
+    else log('Submit failed: '+(r.error||'unknown'));
+  }
+
+  function startScanner(){
+    const html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      decodedText => {
+        document.getElementById("barcode").value = decodedText;
+        log("Scanned barcode: " + decodedText);
+        html5QrCode.stop();
+      }
+    ).catch(err => log("Camera error: " + err));
+  }
+  startScanner();
+  </script>
+</body>
+</html>
