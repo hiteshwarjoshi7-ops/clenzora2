@@ -1,9 +1,13 @@
 {
-  "name": "gndu-waste-mvp",
+  "name": "GNDU_waste_MVP",
   "version": "1.0.0",
   "main": "GNDU_waste_MVP_server.js",
   "scripts": {
     "start": "node GNDU_waste_MVP_server.js"
   },
-  "dependencies": {}
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2"
+  }
 }
